@@ -30,6 +30,21 @@ bool cmp_edf(const Job &a, const Job &b) {
     return a.start + a.d < b.start + b.d;
 }
 
+// comparator for SJF
+bool cmp_sjf(const Job &a, const Job &b) {
+    return a.e - a.exec_time - b.e - b.exec_time;
+}
+
+// comparator for RM
+bool cmp_rm(const Job &a, const Job &b) {
+    return a.p < b.p;
+}
+
+// comparator for DM
+bool cmp_dm(const Job &a, const Job &b) {
+    return a.d < b.d;
+}
+
 int main() {
     // list of tasks
     std::vector<Task> periodic_tasks;
@@ -50,12 +65,16 @@ int main() {
 
     // run simulation
     for (int tiktok = 0; ; ++tiktok) {
+        #ifdef DEBUG
+        std::cout << "TIKTOK = " << tiktok << std::endl;
+        #endif
+
         // does any job need to be added at this instant?
         for (Task &task : periodic_tasks) {
             if (tiktok >= task.phi and (tiktok - task.phi) % task.p == 0) {
                 pq.push(Job(task.phi, task.p, task.e, task.d, tiktok));
                 #ifdef DEBUG
-                std::cout << tiktok << " " << "Added task to queue." << std::endl;
+                std::cout << "Added task to queue." << std::endl;
                 #endif
             }
         }
@@ -73,7 +92,7 @@ int main() {
         }
 
         #ifdef DEBUG
-        std::cout << tiktok << " The current queue size is " << pq.size() << std::endl;
+        std::cout << "The current queue size is " << pq.size() << std::endl;
         #endif
     }
 
