@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <queue>
 #include <functional>
+#include <cassert>
 
 #define DEBUG
 
@@ -10,7 +11,12 @@ const int TICK_RATE = 1;
 
 class Task {
     public:
-    Task(int phi, int p, int e, int d) : phi(phi), p(p), e(e), d(d) {}
+    Task(int phi, int p, int e, int d) : phi(phi), p(p), e(e), d(d) {
+        assert(phi >= 0);
+        assert(p > 0);
+        assert(e > 0);
+        assert(d > 0);
+    }
 
     // phase, period, execution time, relative deadline
     int phi, p, e, d;
