@@ -61,14 +61,14 @@ int main() {
     // list of tasks
     std::vector<Task> periodic_tasks;
     for (int i = 0; i < 10; ++i) {
-        Task t(rand() % 10, rand() % 10, rand() % 10, rand() % 10);
+        Task t(rand() % 10, rand() % 10, rand() % 10, rand() % 10, rand() % 10);
         periodic_tasks.push_back(t);
     }
 
     // initial jobs
     std::vector<Job> jobs;
     for (int i = 0; i < 10; ++i) {
-        Job j(1, 2, 3, 4, 5);
+        Job j(1, 2, 3, 4, 5, 6);
         jobs.push_back(j);
     }
 
@@ -84,7 +84,7 @@ int main() {
         // does any job need to be added at this instant?
         for (Task &task : periodic_tasks) {
             if (tiktok >= task.phi and (tiktok - task.phi) % task.p == 0) {
-                pq.push(Job(task.phi, task.p, task.e, task.d, tiktok));
+                pq.push(Job(task.phi, task.p, task.e, task.d, tiktok, task.priority));
                 #ifdef DEBUG
                 std::cout << "Added task to queue." << std::endl;
                 #endif
