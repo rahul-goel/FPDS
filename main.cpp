@@ -20,11 +20,12 @@ class Task {
 
     // phase, period, execution time, relative deadline
     int phi, p, e, d;
+    int priority;
 };
 
 class Job : public Task {
     public:
-    Job(int phi, int p, int e, int d, int start) : Task(phi, p, e, d), start(start) {}
+    Job(int phi, int p, int e, int d, int start, int priority) : Task(phi, p, e, d, priority), start(start) {}
     
     // start time
     int start;
@@ -49,6 +50,11 @@ bool cmp_rm(const Job &a, const Job &b) {
 // comparator for DM
 bool cmp_dm(const Job &a, const Job &b) {
     return a.d < b.d;
+}
+
+// comparator for priority
+bool cmp_priority(const Job &a, const Job &b) {
+    return a.priority < b.priority;
 }
 
 int main() {
