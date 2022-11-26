@@ -18,18 +18,19 @@
 #define SCHEDULER_FPDS // deferred preemptive scheduling
 */
 
-#define SCHEDULER_FPDS
+//#define SCHEDULER_FPDS_OPT
+//#define SCHEDULER_FPDS_DM
 
 const int TICK_RATE = 1;
 
 class Task {
     public:
-    Task(int phi, int p, int e, int d, float priority, int id) : phi(phi), p(p), e(e), d(d), priority(priority), id(id) {}
+    Task(int phi, int p, int e, int d, int priority, int id) : phi(phi), p(p), e(e), d(d), priority(priority), id(id) {}
 
     // phase, period, execution time, relative deadline
     int phi, p, e, d;
     int id;
-    float priority;
+    int priority;
     // for FPDS, the non-preemptable region length
     int f = 0;
 };
@@ -59,7 +60,8 @@ bool cmp_rm(const Job &a, const Job &b) {
 }
 
 // comparator for DM
-bool cmp_dm(const Job &a, const Job &b) {
+template <typename T>
+bool cmp_dm(const T &a, const T &b) {
     return a.d < b.d;
 }
 
@@ -153,57 +155,39 @@ int main() {
     }
 
     // list of tasks
-    std::vector<Task> periodic_tasks;
-    for (int i = 0; i < tasksets[0].size(); ++i) {
-        int execution_time = tasksets[0][i][0];
-        int period = tasksets[0][i][1];
-        int rel_deadline = tasksets[0][i][2];
-        Task t(0, period, execution_time, rel_deadline, 100, i);
-        periodic_tasks.push_back(t);
-    }
-
-    #ifdef SCHEDULER_FPDS
-    // sort the tasks. higher priority to lower priority.
-    std::sort(periodic_tasks.begin(), periodic_tasks.end(), cmp_priority<Task>);
-
-    // FNR algorithm - in the main loop, we iterate from lower priorities to higher priorities.
-    int num_levels = periodic_tasks.size();
-    std::set<int> unassigned;
-    for (auto &task : periodic_tasks) unassigned.insert(task.id);
 
 
-    // for each priority level k, lowest first
-    for (int lvl = num_levels; lvl >= 1; --lvl) {
-        int min_length = 1e9;
-        int z_id = -1;
+    int successful = 0;
+    for (auto &taskset : tasksets) {
+        std::vector<Task> periodic_tasks;
+        for (int i = 0; i < taskset.size(); ++i) {
+            int execution_time = taskset[i][0];
+            int period = taskset[i][1];
+            int rel_deadline = taskset[i][2];
+            Task t(0, period, execution_time, rel_deadline, 100, i);
+            periodic_tasks.push_back(t);
+        }
 
-        for (auto task : periodic_tasks) {
-            // skip over assigned
-            if (unassigned.lower_bound(task.id) == unassigned.end()) continue;
+        bool schedulable = true;
 
-            std::vector<Task> pseudo_tasklist;
-            for (auto _task : periodic_tasks) {
-                if (_task.id == task.id) {
-                    // this task only -> lower priority so keep it as it is
-                    // skip this addition because we have to add later using variable amount of non-preemptive region time
-                } else if (unassigned.lower_bound(_task.id) == unassigned.end()) {
-                    // assigned already -> keep as it is
-                    pseudo_tasklist.push_back(_task);
-                } else {
-                    // unassigned
-                    _task.priority = 0;
-                    pseudo_tasklist.push_back(_task);
-                }
-            }
+        #ifdef SCHEDULER_FPDS_DM
+        // sort the tasks. higher priority to lower priority.
+        std::sort(periodic_tasks.begin(), periodic_tasks.end(), cmp_dm<Task>);
 
-            // determine the value of the length of the non-preemptive region using binary search
-            // min length can be 0 and max length can be the full execution time
+        // for each priority level k, lowest first
+        for (int lvl = periodic_tasks.size(); lvl >= 1; --lvl) {
+            int min_length = 1e9;
+            int z_id = -1;
+
+            auto task = periodic_tasks[lvl - 1];
+
             int left = 0, right = task.e;
             int length = 1e9;
+
             while (left <= right) {
                 int mid = (left + right) >> 1;
 
-                auto send_tasklist = pseudo_tasklist;
+                auto send_tasklist = std::vector<Task>(periodic_tasks.begin() + lvl, periodic_tasks.end());
                 task.f = mid;
                 task.priority = lvl;
                 send_tasklist.push_back(task);
@@ -222,28 +206,108 @@ int main() {
                 min_length = length;
                 z_id = task.id;
             }
-        }
 
-        if (z_id == -1) {
-            std::cout << "UNSCHEDULABLE" << std::endl;
-            exit(0);
-        } else {
-            for (auto &task : periodic_tasks) {
-                if (task.id == z_id) {
+            if (z_id == -1) {
+                schedulable = false;
+                break;
+            } else {
+                for (auto &task : periodic_tasks) {
+                    if (task.id == z_id) {
+                        task.priority = lvl;
+                        task.f = min_length;
+                        break;
+                    }
+                }
+            } 
+        }
+        #endif
+
+        #ifdef SCHEDULER_FPDS_OPT
+        // sort the tasks. higher priority to lower priority.
+        std::sort(periodic_tasks.begin(), periodic_tasks.end(), cmp_priority<Task>);
+
+        // FNR algorithm - in the main loop, we iterate from lower priorities to higher priorities.
+        int num_levels = periodic_tasks.size();
+        std::set<int> unassigned;
+        for (auto &task : periodic_tasks) unassigned.insert(task.id);
+
+
+        // for each priority level k, lowest first
+        for (int lvl = num_levels; lvl >= 1; --lvl) {
+            int min_length = 1e9;
+            int z_id = -1;
+
+            for (auto task : periodic_tasks) {
+                // skip over assigned
+                if (unassigned.lower_bound(task.id) == unassigned.end()) continue;
+
+                std::vector<Task> pseudo_tasklist;
+                for (auto _task : periodic_tasks) {
+                    if (_task.id == task.id) {
+                        // this task only -> lower priority so keep it as it is
+                        // skip this addition because we have to add later using variable amount of non-preemptive region time
+                    } else if (unassigned.lower_bound(_task.id) == unassigned.end()) {
+                        // assigned already -> keep as it is
+                        pseudo_tasklist.push_back(_task);
+                    } else {
+                        // unassigned
+                        _task.priority = 0;
+                        pseudo_tasklist.push_back(_task);
+                    }
+                }
+
+                // determine the value of the length of the non-preemptive region using binary search
+                // min length can be 0 and max length can be the full execution time
+                int left = 0, right = task.e;
+                int length = 1e9;
+                while (left <= right) {
+                    int mid = (left + right) >> 1;
+
+                    auto send_tasklist = pseudo_tasklist;
+                    task.f = mid;
                     task.priority = lvl;
-                    task.f = min_length;
-                    unassigned.erase(task.id);
-                    break;
+                    send_tasklist.push_back(task);
+
+                    if (is_schedulable_fpds(send_tasklist)) {
+                        // found an answer, look for lower
+                        length = mid;
+                        right = mid - 1;
+                    } else {
+                        // did not find any answer, look for higher
+                        left = mid + 1;
+                    }
+                }
+
+                if (length < min_length) {
+                    min_length = length;
+                    z_id = task.id;
                 }
             }
-        } 
 
+            if (z_id == -1) {
+                schedulable = false;
+                break;
+            } else {
+                for (auto &task : periodic_tasks) {
+                    if (task.id == z_id) {
+                        task.priority = lvl;
+                        task.f = min_length;
+                        unassigned.erase(task.id);
+                        break;
+                    }
+                }
+            } 
+        }
+        #endif
+        successful += schedulable;
     }
 
-    bool s = is_schedulable_fpds(periodic_tasks);
-    std::cout << s << std::endl;
-    #endif
+    float success_ratio = (float) successful / (float) tasksets.size();
+    std::cout << success_ratio << std::endl;
+    return 0;
 
+
+    /*
     // priority queue
     std::priority_queue<Job, std::vector<Job>, std::function<bool(Job, Job)>> pq(cmp_edf);
 
@@ -295,4 +359,5 @@ int main() {
     }
 
     return 0;
+    */
 }

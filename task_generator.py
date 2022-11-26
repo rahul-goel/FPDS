@@ -310,8 +310,10 @@ if __name__ == "__main__":
     nsets = args.nsets
 
 
-    utilizations = StaffordRandFixedSum(n, u, nsets)
-    periods = gen_periods_loguniform(n, nsets, 100, 1000, round_to_int=True)
+    # utilizations = StaffordRandFixedSum(n, u, nsets)
+    utilizations = UUniFastDiscard(n, u, nsets)
+    periods = gen_periods_loguniform(n, nsets, 10, 100, round_to_int=True)
+    periods = gen_periods_loguniform(n, nsets, 10, 100, round_to_int=False)
 
     tasksets = gen_tasksets(utilizations, periods)
 
