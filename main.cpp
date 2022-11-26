@@ -6,6 +6,9 @@
 #include <cassert>
 #include <map>
 #include <set>
+#include <fstream>
+#include <string>
+#include <sstream>
 
 #define DEBUG
 
@@ -21,12 +24,7 @@ const int TICK_RATE = 1;
 
 class Task {
     public:
-    Task(int phi, int p, int e, int d, float priority, int id) : phi(phi), p(p), e(e), d(d), priority(priority), id(id) {
-        assert(phi >= 0);
-        assert(p > 0);
-        assert(e > 0);
-        assert(d > 0);
-    }
+    Task(int phi, int p, int e, int d, float priority, int id) : phi(phi), p(p), e(e), d(d), priority(priority), id(id) {}
 
     // phase, period, execution time, relative deadline
     int phi, p, e, d;
@@ -136,21 +134,33 @@ bool is_schedulable_fpds(std::vector<Task> periodic_tasks) {
 }
 
 int main() {
-    // list of tasks
-    // TODO - fix this shit
-    std::vector<Task> periodic_tasks;
-    for (int i = 0; i < 10; ++i) {
-        Task t(0, 20, 1, 20, i, i + 1);
-        periodic_tasks.push_back(t);
+
+    // read generated parameters
+
+    int num_tasksets;
+    std::cin >> num_tasksets;
+
+    std::vector<std::vector<std::vector<int>>> tasksets(num_tasksets);
+
+
+    for (int i = 0; i < num_tasksets; ++i) {
+        int num_task;
+        std::cin >> num_task;
+        tasksets[i] = std::vector<std::vector<int>>(num_task, std::vector<int>(3));
+        for (int j = 0; j < num_task; ++j) {
+            for (int k = 0; k < 3; ++k) std::cin >> tasksets[i][j][k];
+        }
     }
 
-    // initial jobs
-    std::vector<Job> jobs;
-    for (int i = 0; i < 10; ++i) {
-        Job j(1, 2, 3, 4, 5, 6, i);
-        jobs.push_back(j);
+    // list of tasks
+    std::vector<Task> periodic_tasks;
+    for (int i = 0; i < tasksets[0].size(); ++i) {
+        int execution_time = tasksets[0][i][0];
+        int period = tasksets[0][i][1];
+        int rel_deadline = tasksets[0][i][2];
+        Task t(0, period, execution_time, rel_deadline, 100, i);
+        periodic_tasks.push_back(t);
     }
-    jobs.clear();
 
     #ifdef SCHEDULER_FPDS
     // sort the tasks. higher priority to lower priority.
@@ -235,7 +245,7 @@ int main() {
     #endif
 
     // priority queue
-    std::priority_queue<Job, std::vector<Job>, std::function<bool(Job, Job)>> pq(jobs.begin(), jobs.end(), cmp_edf);
+    std::priority_queue<Job, std::vector<Job>, std::function<bool(Job, Job)>> pq(cmp_edf);
 
     // run simulation
     for (int tiktok = 0; ; ++tiktok) {

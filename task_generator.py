@@ -6,6 +6,7 @@ Tools for generating task sets.
 import numpy as np
 import random
 import math
+import argparse
 
 
 def UUniFastDiscard(n, u, nsets):
@@ -296,12 +297,36 @@ def gen_tasksets(utilizations, periods):
             for us, ps in zip(utilizations, periods)]
 
 if __name__ == "__main__":
-    n = 10
-    u = 0.8
-    nsets = 1
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--n', type=int, default=10)
+    parser.add_argument('--u', type=float, default=0.6)
+    parser.add_argument('--nsets', type=int, default=1)
+    parser.add_argument('--deadline', type=str, default='implicit')
+    args = parser.parse_args()
+
+    n = args.n
+    u = args.u
+    nsets = args.nsets
+
 
     utilizations = StaffordRandFixedSum(n, u, nsets)
-    periods = gen_periods_loguniform(n, nsets, 4, 6, round_to_int=True)
-    print(utilizations, periods)
+    periods = gen_periods_loguniform(n, nsets, 100, 1000, round_to_int=True)
+
     tasksets = gen_tasksets(utilizations, periods)
-    print(tasksets)
+
+    for taskset in tasksets:
+        for i in range(len(taskset)):
+            if args.deadline == 'constrained':
+                e = int(taskset[i][0])
+                p = int(taskset[i][1])
+                d = random.randint(int(e + 0.5 * (p - e)), p)
+                taskset[i] = (e, p, d)
+            else:
+                taskset[i] = (int(taskset[i][0]), int(taskset[i][1]), int(taskset[i][1]))
+
+    print(len(tasksets))
+    for taskset in tasksets:
+        print(len(taskset))
+        for task in taskset:
+            print(task[0], task[1], task[2])
