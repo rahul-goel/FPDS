@@ -294,3 +294,14 @@ def gen_tasksets(utilizations, periods):
 
     return [[(trunc(ui * pi, 6), trunc(pi, 6)) for ui, pi in zip(us, ps)]
             for us, ps in zip(utilizations, periods)]
+
+if __name__ == "__main__":
+    n = 10
+    u = 0.8
+    nsets = 1
+
+    utilizations = StaffordRandFixedSum(n, u, nsets)
+    periods = gen_periods_loguniform(n, nsets, 4, 6, round_to_int=True)
+    print(utilizations, periods)
+    tasksets = gen_tasksets(utilizations, periods)
+    print(tasksets)
