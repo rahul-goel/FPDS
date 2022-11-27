@@ -312,8 +312,10 @@ if __name__ == "__main__":
 
     # utilizations = StaffordRandFixedSum(n, u, nsets)
     utilizations = UUniFastDiscard(n, u, nsets)
-    periods = gen_periods_loguniform(n, nsets, 10, 100, round_to_int=True)
-    periods = gen_periods_loguniform(n, nsets, 10, 100, round_to_int=False)
+    if args.deadline == 'implicit':
+        periods = gen_periods_loguniform(n, nsets, 5, 25, round_to_int=False)
+    else:
+        periods = gen_periods_loguniform(n, nsets, 5, 25, round_to_int=False)
 
     tasksets = gen_tasksets(utilizations, periods)
 

@@ -18,7 +18,7 @@
 #define SCHEDULER_FPDS // deferred preemptive scheduling
 */
 
-//#define SCHEDULER_FPDS_OPT
+#define SCHEDULER_FPDS_OPT
 //#define SCHEDULER_FPDS_DM
 
 const int TICK_RATE = 1;
@@ -173,12 +173,10 @@ int main() {
         #ifdef SCHEDULER_FPDS_DM
         // sort the tasks. higher priority to lower priority.
         std::sort(periodic_tasks.begin(), periodic_tasks.end(), cmp_dm<Task>);
+        for (int lvl = 1; lvl <= periodic_tasks.size(); ++lvl) periodic_tasks[lvl - 1].priority = lvl;
 
         // for each priority level k, lowest first
         for (int lvl = periodic_tasks.size(); lvl >= 1; --lvl) {
-            int min_length = 1e9;
-            int z_id = -1;
-
             auto task = periodic_tasks[lvl - 1];
 
             int left = 0, right = task.e;
@@ -202,22 +200,12 @@ int main() {
                 }
             }
 
-            if (length < min_length) {
-                min_length = length;
-                z_id = task.id;
-            }
-
-            if (z_id == -1) {
+            if (length == 1e9) {
                 schedulable = false;
                 break;
             } else {
-                for (auto &task : periodic_tasks) {
-                    if (task.id == z_id) {
-                        task.priority = lvl;
-                        task.f = min_length;
-                        break;
-                    }
-                }
+                periodic_tasks[lvl - 1].priority = lvl;
+                periodic_tasks[lvl - 1].f = length;
             } 
         }
         #endif
